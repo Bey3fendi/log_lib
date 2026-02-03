@@ -4,8 +4,8 @@
 #include <iostream>
 #include <stdlib.h>
 
-#include "src/App.h"
-#include "utils/util.h"
+#include "App.h"
+#include "util.h"
 
 constexpr auto app_info = "log_daemon";
 
