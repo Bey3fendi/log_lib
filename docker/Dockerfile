@@ -41,5 +41,5 @@ RUN set -eux; \
     echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${USERNAME}"; \
     chmod 0440 "/etc/sudoers.d/${USERNAME}"
 
-WORKDIR /work
+WORKDIR /workspace
 CMD ["bash"]
