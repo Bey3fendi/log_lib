@@ -5,10 +5,10 @@
     "context": ".."
   },
 
-  "workspaceFolder": "/work",
+  "workspaceFolder": "/workspace",
 
   "mounts": [
-    "source=${localWorkspaceFolder},target=/work,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
   ],
 
   "runArgs": [
