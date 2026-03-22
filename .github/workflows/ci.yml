@@ -52,6 +52,9 @@ jobs:
           gcovr \
             --root . \
             --object-directory build-coverage \
+            --exclude-directories build-coverage/CMakeFiles \
+            --exclude-directories .*/CMakeFiles \
+            --gcov-ignore-errors source_not_found \
             --xml coverage.xml \
             --xml-pretty \
             --lcov lcov.info \
