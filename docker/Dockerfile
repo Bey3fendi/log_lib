@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     ca-certificates \
     sudo \
+    nlohmann-json3-dev \
+    libgtest-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ARG USERNAME=dev
