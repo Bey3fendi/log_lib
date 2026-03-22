@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python for coverage tooling
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang-tidy libgtest-dev lcov
+          python -m pip install --upgrade pip gcovr
+
+      - name: Static analysis
+        run: |
+          cmake -S . -B build-clang-tidy \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+          cmake --build build-clang-tidy --parallel
+
+      - name: Build
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON
+          cmake --build build --parallel
+
+      - name: Run unit tests with coverage
+        run: |
+          cmake -S . -B build-coverage \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DCMAKE_SHARED_LINKER_FLAGS="--coverage"
+          cmake --build build-coverage --parallel
+          ctest --test-dir build-coverage --output-on-failure --output-junit junit.xml
+          mkdir -p coverage
+          gcovr \
+            --root . \
+            --object-directory build-coverage \
+            --xml-pretty coverage.xml \
+            --lcov lcov.info \
+            --html-details coverage/index.html
+
+      - name: Upload test/coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage
+          path: |
+            coverage/**
+            coverage.xml
+            lcov.info
+            junit.xml
