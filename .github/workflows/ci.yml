@@ -52,9 +52,11 @@ jobs:
           gcovr \
             --root . \
             --object-directory build-coverage \
-            --xml-pretty coverage.xml \
+            --xml coverage.xml \
+            --xml-pretty \
             --lcov lcov.info \
-            --html-details coverage/index.html
+            --html-details coverage/index.html \
+            --txt coverage/summary.txt
 
       - name: Static analysis
         id: static_analysis
