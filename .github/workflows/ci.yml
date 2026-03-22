@@ -22,15 +22,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang-tidy libgtest-dev lcov
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            cppcheck \
+            libgtest-dev \
+            lcov \
+            nlohmann-json3-dev
           python -m pip install --upgrade pip gcovr
-
-      - name: Static analysis
-        run: |
-          cmake -S . -B build-clang-tidy \
-            -DBUILD_TESTING=ON \
-            -DCMAKE_CXX_CLANG_TIDY=clang-tidy
-          cmake --build build-clang-tidy --parallel
 
       - name: Build
         run: |
@@ -57,12 +56,34 @@ jobs:
             --lcov lcov.info \
             --html-details coverage/index.html
 
-      - name: Upload test/coverage artifacts
+      - name: Static analysis
+        id: static_analysis
+        continue-on-error: true
+        run: |
+          mkdir -p static-analysis
+          cppcheck \
+            --enable=all \
+            --inconclusive \
+            --std=c++17 \
+            --language=c++ \
+            --xml \
+            --xml-version=2 \
+            --suppress=missingIncludeSystem \
+            --error-exitcode=1 \
+            src tests 2> static-analysis/cppcheck-report.xml
+
+      - name: Upload test, coverage, and analysis artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-and-coverage
+          name: ci-artifacts
           path: |
             coverage/**
             coverage.xml
             lcov.info
             junit.xml
+            static-analysis/**
+
+      - name: Fail job on static analysis findings
+        if: always() && steps.static_analysis.outcome == 'failure'
+        run: exit 1
