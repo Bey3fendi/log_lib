@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.10)
 project(log_daemon VERSION 1.0.0 LANGUAGES CXX)
 
 include(CTest)
