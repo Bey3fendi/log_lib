@@ -50,13 +50,10 @@ jobs:
           ctest --test-dir build-coverage --output-on-failure --output-junit junit.xml
           mkdir -p coverage
           gcovr \
-            --root "$GITHUB_WORKSPACE" \
+            --root . \
             --object-directory build-coverage \
-            --filter "$GITHUB_WORKSPACE/src/.*" \
-            --filter "$GITHUB_WORKSPACE/main\\.cpp" \
-            --exclude "$GITHUB_WORKSPACE/tests/.*" \
-            --exclude-directories 'build-coverage/CMakeFiles' \
-            --exclude-directories '.*/CMakeFiles' \
+            --exclude 'tests/.*' \
+            --exclude 'build-coverage/.*' \
             --gcov-ignore-errors source_not_found \
             --xml coverage.xml \
             --xml-pretty \
