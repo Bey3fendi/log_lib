@@ -26,7 +26,8 @@ public:
   void init(std::string config_input);
   void start();
   bool shutdown();
-  void log(std::string &log_level, std::string &payload);
+  void log(std::string_view log_level, std::string_view payload);
+  void log(std::string_view payload);
 
 private:
   std::string app_name_{};

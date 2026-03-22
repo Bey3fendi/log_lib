@@ -45,11 +45,10 @@ TEST(LoggerTest, StartLogAndShutdownReturnsTrue) {
   logger.init(R"({"app_name":"logger-test","level":"INFO","pid":"222"})");
   logger.start();
 
-  std::string level = "INFO";
-  std::string payload = "logger branch payload";
-  logger.log(level, payload);
-  logger.log(level, payload);
-  logger.log(level, payload);
+  logger.log("INFO", "logger branch payload");
+  logger.log("logger branch payload");
+  logger.log("INFO", "logger branch payload");
+  
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
   EXPECT_TRUE(logger.shutdown());
 
