@@ -38,8 +38,13 @@ bool SLogger::shutdown() {
   return true;
 }
 
-void SLogger::log(std::string &log_level, std::string &payload) {
+void SLogger::log(std::string_view log_level, std::string_view payload) {
   auto log_event = std::make_unique<LogEvent>(log_level, payload, app_name_);
+  queue_->TryPush(std::move(log_event));
+}
+
+void SLogger::log(const std::string_view payload) {
+  auto log_event = std::make_unique<LogEvent>(config_log_level_, payload, app_name_);
   queue_->TryPush(std::move(log_event));
 }
 
