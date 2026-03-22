@@ -1,4 +1,5 @@
 # log_lib
+<<<<<<< HEAD
 
 `log_lib` is a small C++ logging library built around an asynchronous logging pipeline.
 It accepts log events, queues them, formats them, and writes them to both the console and a file sink.
@@ -279,3 +280,6 @@ CI currently checks:
 - unit tests
 - coverage artifact generation
 - static analysis artifact generation
+=======
+log-lib
+>>>>>>> 71f1f39d5a8c947be7e059d966baaab511756d2e
