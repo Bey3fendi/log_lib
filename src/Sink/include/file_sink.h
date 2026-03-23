@@ -2,6 +2,7 @@
 
 #include "sink_interface.h"
 
+#include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <string>
@@ -10,7 +11,9 @@ namespace sink {
 
 class FileSink : public ISink {
 public:
-  explicit FileSink(std::string path = "/tmp/log_daemon.log");
+  static std::filesystem::path DefaultLogPath();
+
+  explicit FileSink(std::string path = "");
   ~FileSink() override;
 
   void Write(const std::vector<uint8_t> &bytes) override;
