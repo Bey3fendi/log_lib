@@ -3,10 +3,18 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace sink {
 
-FileSink::FileSink(std::string path) : path_(std::move(path)) { OpenIfNeeded(); }
+std::filesystem::path FileSink::DefaultLogPath() {
+  return std::filesystem::current_path() / "logs" / "log_daemon.log";
+}
+
+FileSink::FileSink(std::string path)
+    : path_(path.empty() ? DefaultLogPath().string() : std::move(path)) {
+  OpenIfNeeded();
+}
 
 FileSink::~FileSink() {
   std::lock_guard<std::mutex> lock(mutex_);

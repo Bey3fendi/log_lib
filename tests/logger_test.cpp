@@ -1,4 +1,5 @@
 #include "src/Logger/include/logger.h"
+#include "src/Sink/include/file_sink.h"
 
 #include <gtest/gtest.h>
 
@@ -37,7 +38,7 @@ TEST(LoggerTest, StartAndImmediateShutdownReturnsTrue) {
 }
 
 TEST(LoggerTest, StartLogAndShutdownReturnsTrue) {
-  const std::filesystem::path path = "/tmp/log_daemon.log";
+  const std::filesystem::path path = sink::FileSink::DefaultLogPath();
   std::error_code ec;
   std::filesystem::remove(path, ec);
 
@@ -48,7 +49,7 @@ TEST(LoggerTest, StartLogAndShutdownReturnsTrue) {
   logger.log("INFO", "logger branch payload");
   logger.log("logger branch payload");
   logger.log("INFO", "logger branch payload");
-  
+
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
   EXPECT_TRUE(logger.shutdown());
 

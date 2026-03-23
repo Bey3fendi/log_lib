@@ -1,43 +1,32 @@
 # log_lib
-<<<<<<< HEAD
 
-`log_lib` is a small C++ logging library built around an asynchronous logging pipeline.
-It accepts log events, queues them, formats them, and writes them to both the console and a file sink.
+`log_lib` is a small C++17 logging library with an asynchronous worker. Your application initializes the logger once, pushes log messages into a queue, and the library formats and writes each entry to both stdout and a file.
 
-## Features
-
-- asynchronous logging through a background worker thread
-- singleton logger API for simple integration
-- console sink and file sink enabled by default
-- JSON-based logger initialization
-- unit tests with GoogleTest
-
-Default file output path:
-- `/tmp/log_daemon.log`
-
-## Log Format
-
-Each message is formatted like this:
+The default file sink writes to the current working directory, under:
 
 ```text
-YYYY-MM-DD HH:MM:SS [app_name] [level] payload
+./logs/log_daemon.log
 ```
 
-Example:
+The `logs/` directory is created automatically if it does not already exist.
 
-```text
-2026-03-22 12:00:00 [my-app] [INFO] service started
-```
+## What It Does
+
+- Accepts log messages through a singleton logger API.
+- Buffers messages in an in-memory queue and processes them on a worker thread.
+- Formats each record as a single line with timestamp, app name, level, and payload.
+- Writes every formatted line to both the console and a log file.
+- Builds with CMake and includes a GoogleTest-based test suite.
 
 ## Requirements
 
 - Linux
-- CMake 3.10+
-- C++ compiler with C++17 support
+- CMake 3.10 or newer
+- A C++17 compiler
 - `nlohmann_json`
-- GoogleTest for unit tests
+- GoogleTest, if you want to build and run the unit tests
 
-Ubuntu or Debian:
+On Ubuntu or Debian:
 
 ```bash
 sudo apt-get update
@@ -46,22 +35,54 @@ sudo apt-get install -y build-essential cmake nlohmann-json3-dev libgtest-dev
 
 ## Build
 
+Configure and build from the repository root:
+
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
 cmake --build build --parallel
 ```
 
-## Run Tests
+The top-level CMake build defines these main targets:
+
+- `logger`
+- `log_daemon`
+- `unit_test` when `BUILD_TESTING=ON` and GTest is available
+
+## Test
+
+Run the test suite with CTest:
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-## Quick Start
+If GTest is not available, CMake emits a warning and skips the `unit_test` target.
 
-### Required configuration
+## Public API
 
-`logger::SLogger::init()` expects a JSON string with these keys:
+The main entry point is `logger::SLogger` in [`/workspace/src/Logger/include/logger.h`](/workspace/src/Logger/include/logger.h).
+
+```cpp
+static SLogger &getInstance();
+void init(std::string config_input);
+void start();
+bool shutdown();
+void log(std::string_view log_level, std::string_view payload);
+void log(std::string_view payload);
+```
+
+Exact behavior:
+
+- `getInstance()` returns the singleton logger.
+- `init()` parses a JSON configuration string and creates the queue, formatter, sink manager, and worker.
+- `start()` launches the background worker thread.
+- `log(level, payload)` logs with an explicit level and generate a log_event and push it into the queue.
+- `log(payload)` same. only difference isuses the level from the configuration passed to `init()`.
+- `shutdown()` stops the queue, flushes the sinks, and joins the worker thread. It returns `false` if the worker was never started.
+
+## Configuration
+
+`init()` expects a JSON string with these required string keys:
 
 - `app_name`
 - `level`
@@ -77,19 +98,12 @@ Example:
 }
 ```
 
-### Severity Suggestions for your project
-in this project you can adjust your severity levels however you want but our suggestions are:
-  1- INFO: for normal info logs
-  2- WARNING: for non-critical warning situations
-  3- ERROR: for critical error situations
-  4- CRITICAL: for most critical errors have a chance to be happened somehow.
+If the JSON is malformed or a required field is missing, the parser logs an error to `stderr` and returns empty strings.
 
-### Minimal example
+## Quick Start
 
 ```cpp
-#include "src/Logger/include/logger.h"
-
-#include <string>
+#include "logger.h"
 
 int main() {
   auto &log = logger::SLogger::getInstance();
@@ -97,115 +111,56 @@ int main() {
   log.init(R"({"app_name":"demo-app","level":"INFO","pid":"12345"})");
   log.start();
 
-  std::string payload = "service started";
-  log.log(payload); //if using with default log level coming from your json input in init state or:
-  log.log("ERROR", payload); // if wanna use the logger with custom level.
-
-  if (!log.shutdown()) {
-    return 1;
-  }
-
-  return 0;
-}
-```
-
-### Expected result
-
-The example above writes the same formatted log line to:
-
-- standard output
-- `/tmp/log_daemon.log`
-
-## Public API
-
-The main user-facing type is `logger::SLogger`.
-
-```cpp
-static SLogger &getInstance();
-void init(std::string config_input);
-void start();
-bool shutdown();
-void log(std::string &log_level, std::string &payload);
-```
-
-Lifecycle:
-
-1. Call `init()` once.
-2. Call `start()` once.
-3. Send log messages through `log()`.
-4. Call `shutdown()` before process exit.
-
-Behavior notes:
-
-- `init()` creates the queue, formatter, sinks, and worker.
-- `start()` launches the worker thread.
-- `log()` pushes a `LogEvent` into the queue.
-- `shutdown()` stops the queue, joins the worker thread, and flushes the sinks.
-- `shutdown()` returns `false` if the worker thread was never started.
-
-## Usage Example
-
-```cpp
-#include "src/Logger/include/logger.h"
-
-#include <string>
-
-int main() {
-  auto &log = logger::SLogger::getInstance();
-  log.init(R"({"app_name":"payment-service","level":"INFO","pid":"2026"})");
-  log.start();
-
-  log.log("INFO", "service started");
-  log.log("WARN", "downstream timeout, retry scheduled");
+  log.log("service started");
+  log.log("ERROR", "database unavailable");
 
   return log.shutdown() ? 0 : 1;
 }
 ```
 
-## CMake Targets
+## Runtime Behavior
 
-This repository currently builds these internal targets:
+When you call the API in that order:
 
-- `logger`
-- `log_event`
-- `queue`
-- `formatter`
-- `worker_thread`
-- `sink`
-- `sink_interface`
-- `sink_manager`
-- `utils`
-- `log_daemon`
+1. `init()` reads the JSON config and sets the app name and default log level.
+2. `init()` creates two sinks: console and file.
+3. `init()` prepares the file sink at `./logs/log_daemon.log` relative to the process current working directory.
+4. `start()` starts a worker thread that waits for queued log events.
+5. `log()` creates a `LogEvent` and pushes it into the queue.
+6. The worker formats each event as:
 
-Build entry point:
-
-```bash
-cmake -S . -B build
-cmake --build build --parallel
+```text
+YYYY-MM-DD HH:MM:SS [app_name] [level] payload
 ```
 
-## Configuration Reference
+7. The formatted line is written to stdout and appended to the log file.
+8. `shutdown()` stops the queue, drains remaining events, flushes the sinks, and joins the worker thread.
 
-| Key | Type | Description |
-| --- | --- | --- |
-| `app_name` | string | Application name shown in each log line |
-| `level` | string | Configured log level value |
-| `pid` | string | Process identifier parsed from config |
+## Important Details
 
-Example:
+- The file sink appends to the log file rather than truncating it.
+- The queue capacity is `200` messages. When it overflows, the oldest queued message is dropped.
+- The logger is a singleton, so the same instance should be reused for the whole process.
+- There is no install/export package yet; the project is meant to be consumed from the source tree.
+
+## Using It From Another CMake Project
+
+The simplest integration is to add this repository as a subdirectory and link the `logger` target.
+
+```cmake
+add_subdirectory(path/to/log_lib)
+target_link_libraries(your_app PRIVATE logger)
+```
+
+Then include the public header from your application code:
 
 ```cpp
-log.init(R"({"app_name":"billing","level":"DEBUG","pid":"9001"})");
+#include "logger.h"
 ```
 
-## Output Sinks
+This works because the `logger` target publishes the header directory through CMake. If you want a packaged install flow, the CMake export/install setup still needs to be added.
 
-The current implementation enables both sinks automatically during `init()`:
-
-- `ConsoleSink`: writes to standard output
-- `FileSink`: appends to `/tmp/log_daemon.log`
-
-## Project Structure
+## Project Layout
 
 ```text
 .
@@ -274,7 +229,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-CI currently checks:
+CI pipeline currently checks:
 
 - project build
 - unit tests
@@ -282,4 +237,3 @@ CI currently checks:
 - static analysis artifact generation
 =======
 log-lib
->>>>>>> 71f1f39d5a8c947be7e059d966baaab511756d2e
